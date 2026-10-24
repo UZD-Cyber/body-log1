@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>身体日志</title>
+<meta name="theme-color" content="#F1F2EE">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+/* 单列手机布局；卷尺黄标记"已填" */
+:root {
+  --bg: #F1F2EE; --surface: #FFFFFF; --sunk: #E6E8E2; --ink: #1B1E1C; --muted: #676D68; --line: #D9DCD5;
+  --tape: #F0BE2C; --tape-ink: #1B1E1C; --tape-text: #8A6400; --danger: #B3372B; --ok: #2F7A4F;
+  --num: "DIN Alternate", "Roboto Condensed", "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #121412; --surface: #1C1F1C; --sunk: #262A26; --ink: #E8EBE7; --muted: #9AA19B; --line: #313631;
+  --tape-text: #F0BE2C; --danger: #E2685B; --ok: #6FC08F; color-scheme: dark } }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+.wrap { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 calc(48px + env(safe-area-inset-bottom, 0px)); }
+header.top { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-top: calc(12px + env(safe-area-inset-top, 0px)); padding-bottom: 10px; display: grid; gap: 10px; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.brand h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .02em; }
+.brand .today { font-family: var(--num); font-size: 15px; color: var(--muted); letter-spacing: .04em; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--sunk); border-radius: 10px; padding: 3px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600; padding: 8px 0; border-radius: 8px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.tabs button .badge { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); vertical-align: top; margin-left: 2px; }
+
+section.view { display: grid; gap: 22px; padding-top: 8px; }
+h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: .08em; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--tape); outline-offset: 2px; }
+
+.composer textarea { width: 100%; min-height: 76px; resize: vertical; border: 0; background: transparent; padding: 0; outline: none; font-size: 16px; }
+.composer .bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.attach-list { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.attach-list .chip { position: relative; width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: var(--sunk); }
+.attach-list .chip img, .attach-list .chip video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-list .chip button { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; line-height: 20px; padding: 0; cursor: pointer; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 9px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--tape); color: var(--tape-ink); border-color: var(--tape); }
+.btn.wide { width: 100%; padding: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.hint { font-size: 13px; color: var(--muted); }
+.err { font-size: 13px; color: var(--danger); }
+
+.strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.strip button { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 0 5px; cursor: pointer; display: grid; justify-items: center; gap: 1px; }
+.strip .wd { font-size: 11px; color: var(--muted); }
+.strip .dd { font-family: var(--num); font-size: 18px; font-weight: 600; line-height: 1.1; }
+.strip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.strip .dot.on { background: var(--tape); }
+.strip button[aria-pressed="true"] { border-color: var(--ink); }
+.strip-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.strip-nav button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px 6px; font-size: 13px; }
+
+.row { display: grid; grid-template-columns: 6.5em 1fr; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.row:last-child { border-bottom: 0; }
+.row label { font-weight: 600; }
+.row .field { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.row input[type="number"], .row input[type="time"] { width: 6.5em; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 7px 9px; font-family: var(--num); font-size: 19px; font-weight: 600; }
+.row .unit { color: var(--muted); font-size: 13px; }
+.row .sub { color: var(--muted); font-size: 12px; font-family: var(--num); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.stepper button { border: 0; background: var(--sunk); width: 38px; height: 38px; font-size: 18px; cursor: pointer; }
+.stepper output { min-width: 40px; text-align: center; font-family: var(--num); font-size: 20px; font-weight: 600; }
+.row textarea { width: 100%; min-height: 54px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 7px 9px; resize: vertical; }
+.row.stack { grid-template-columns: 1fr; gap: 6px; }
+.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.shot { position: relative; aspect-ratio: 3 / 4; max-width: 100%; border: 1.5px dashed var(--line); border-radius: 10px; background: var(--bg); overflow: hidden; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shot .lab { position: absolute; left: 6px; bottom: 6px; background: var(--tape); color: var(--tape-ink); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+.shot .empty { color: var(--muted); font-size: 13px; display: grid; justify-items: center; gap: 2px; }
+.shot .empty b { font-size: 22px; font-weight: 400; line-height: 1; }
+.save-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+.day { display: grid; gap: 8px; }
+.day-head { display: flex; align-items: baseline; gap: 8px; }
+.day-head .d { font-family: var(--num); font-size: 22px; font-weight: 700; }
+.day-head .w { color: var(--muted); font-size: 13px; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { background: var(--sunk); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
+.pill b { font-family: var(--num); font-size: 16px; font-weight: 600; margin-left: 3px; }
+.pill.flag { background: var(--tape); color: var(--tape-ink); }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+.note .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.note time { font-family: var(--num); color: var(--muted); font-size: 15px; }
+.note .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.note .media { display: flex; gap: 6px; flex-wrap: wrap; }
+.note .media img { width: 92px; height: 92px; object-fit: cover; border-radius: 8px; cursor: pointer; background: var(--sunk); }
+.note .media video { width: 100%; max-height: 320px; border-radius: 8px; background: #000; }
+.linkbtn { border: 0; background: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 2px 4px; }
+.linkbtn.armed { color: var(--danger); font-weight: 600; }
+
+.seg { display: inline-flex; flex-wrap: wrap; background: var(--sunk); border-radius: 9px; padding: 3px; }
+.seg button { border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); }
+.wall-row { display: grid; gap: 6px; }
+.wall-row .cap { display: flex; align-items: baseline; gap: 10px; }
+.wall-row .cap .d { font-family: var(--num); font-size: 19px; font-weight: 700; }
+.kg { font-family: var(--num); color: var(--tape-text); font-size: 16px; font-weight: 600; }
+.wall-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tile { position: relative; aspect-ratio: 3 / 4; max-width: 100%; border-radius: 8px; overflow: hidden; background: var(--sunk); padding: 0; border: 0; cursor: pointer; }
+.tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile .lab { position: absolute; left: 5px; top: 5px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.55); color: #fff; padding: 0 5px; border-radius: 4px; }
+.tile .lab.date { font-family: var(--num); font-size: 13px; }
+.tile.none { display: grid; place-items: center; color: var(--muted); font-size: 12px; cursor: default; }
+.cmp-pick { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
+.cmp-pick select { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 7px 8px; font-family: var(--num); font-size: 16px; }
+.cmp-line, .cmp-head { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cmp-head { font-family: var(--num); font-size: 16px; font-weight: 600; }
+
+.backup { display: grid; gap: 10px; }
+.backup .status { font-size: 14px; }
+.backup .status b { font-family: var(--num); font-size: 18px; }
+.backup .warn { color: var(--danger); font-weight: 600; }
+.backup p { margin: 0; }
+
+.empty-state { text-align: center; color: var(--muted); padding: 28px 12px; border: 1.5px dashed var(--line); border-radius: 14px; }
+.banner { background: var(--tape); color: var(--tape-ink); border-radius: 10px; padding: 10px 12px; font-size: 14px; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.banner button { border: 0; background: var(--tape-ink); color: var(--tape); border-radius: 7px; padding: 5px 10px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.92); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); }
+.lightbox img { max-width: 100%; max-height: 86vh; object-fit: contain; border-radius: 6px; }
+.lightbox .cap { color: #fff; font-family: var(--num); font-size: 17px; margin-top: 8px; text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 9px; font-size: 14px; z-index: 60; max-width: calc(100% - 32px); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>身体日志</h1><span class="today" id="todayLabel"></span></div>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="today">今天</button>
+      <button role="tab" aria-selected="false" data-tab="timeline">时间线</button>
+      <button role="tab" aria-selected="false" data-tab="wall">照片墙</button>
+      <button role="tab" aria-selected="false" data-tab="backup">导出<span class="badge" id="exportBadge" hidden></span></button>
+    </div>
+  </header>
+
+  <!-- 今天 -->
+  <section class="view" id="view-today">
+    <div id="exportNag" class="banner" hidden><span id="exportNagText"></span><button type="button" id="exportNagBtn">去导出</button></div>
+    <div>
+      <h2>随手记</h2>
+      <div class="panel composer">
+        <textarea id="noteText" placeholder="想到啥写啥：骑车 40 分钟、今天奶茶换了三分糖、膝盖有点酸……"></textarea>
+        <div class="bar">
+          <div class="attach-list" id="attachList"></div>
+          <button class="btn" id="attachBtn" type="button">＋ 照片/视频</button>
+          <button class="btn primary" id="sendBtn" type="button">记下</button>
+        </div>
+        <div class="err" id="noteErr" hidden></div>
+        <input type="file" id="attachInput" accept="image/*,video/*" multiple hidden>
+      </div>
+    </div>
+
+    <div>
+      <div class="strip-nav">
+        <h2 style="margin:0">每日基础表</h2>
+        <div><button type="button" id="prevWeek">‹ 前一周</button><button type="button" id="nextWeek">后一周 ›</button></div>
+      </div>
+      <div class="strip" id="strip"></div>
+    </div>
+
+    <div class="panel">
+      <div class="row"><label for="fWeight">体重</label>
+        <div class="field"><input id="fWeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">斤</span><span class="sub" id="kgSub"></span></div></div>
+      <div class="row"><label for="fWaist">腰围</label>
+        <div class="field"><input id="fWaist" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">cm · 肚脐一圈</span></div></div>
+      <div class="row"><label for="fSleep">昨晚几点睡</label>
+        <div class="field"><input id="fSleep" type="time" style="width:8em"></div></div>
+      <div class="row"><label>奶茶</label>
+        <div class="field"><span class="stepper"><button type="button" id="teaMinus" aria-label="少一杯">−</button><output id="fTea">—</output><button type="button" id="teaPlus" aria-label="多一杯">＋</button></span><span class="unit">杯</span></div></div>
+      <div class="row"><label for="fSys">血压</label>
+        <div class="field"><input id="fSys" type="number" inputmode="numeric" placeholder="高压" style="width:4.6em"><span class="unit">/</span><input id="fDia" type="number" inputmode="numeric" placeholder="低压" style="width:4.6em"><span class="unit">mmHg</span></div></div>
+      <div class="row stack"><label for="fSpecial">特别情况</label>
+        <textarea id="fSpecial" placeholder="暴饮暴食、熬得很晚、生病没练……没有就空着"></textarea></div>
+      <div class="row stack"><label>三视图 <span class="hint">（一周拍一次就够）</span></label>
+        <div class="shots" id="shots"></div></div>
+      <div class="save-bar">
+        <span class="hint" id="saveState">每项都可以不填</span>
+        <button class="btn primary" id="saveBtn" type="button">保存这天</button>
+      </div>
+      <input type="file" id="shotInput" accept="image/*" hidden>
+    </div>
+    <p class="hint" style="margin:0">凌晨 4 点前记的，算前一天。</p>
+  </section>
+
+  <!-- 时间线 -->
+  <section class="view" id="view-timeline" hidden><div id="timeline"></div></section>
+
+  <!-- 照片墙 -->
+  <section class="view" id="view-wall" hidden>
+    <div class="seg" id="wallMode">
+      <button type="button" data-mode="all" aria-pressed="true">全部</button>
+      <button type="button" data-mode="front" aria-pressed="false">正面</button>
+      <button type="button" data-mode="side" aria-pressed="false">侧面</button>
+      <button type="button" data-mode="back" aria-pressed="false">背面</button>
+      <button type="button" data-mode="cmp" aria-pressed="false">对比</button>
+    </div>
+    <div id="wall"></div>
+  </section>
+
+  <!-- 导出 -->
+  <section class="view" id="view-backup" hidden>
+    <div class="panel backup">
+      <h2 style="margin:0">发给 Claude</h2>
+      <p class="status" id="lastExport"></p>
+      <p class="hint">只有文字和数字，文件很小。每周导出一次，发到电脑上，再传给 Claude。</p>
+      <button class="btn primary wide" id="exportRecords" type="button">导出记录</button>
+      <button class="btn wide" id="copyRecords" type="button">复制记录文字（直接粘贴到对话里）</button>
+    </div>
+    <div class="panel backup">
+      <h2 style="margin:0">完整备份</h2>
+      <p class="hint">记录加所有照片和视频，打包成一个 zip。换手机、清浏览器数据之前一定要做一次，平时一个月做一次就行，自己存好。</p>
+      <button class="btn wide" id="exportFull" type="button">导出完整备份</button>
+      <button class="btn wide" id="importBtn" type="button">从备份恢复</button>
+      <input type="file" id="importInput" accept=".zip,application/zip" hidden>
+      <p class="hint" id="importState"></p>
+    </div>
+    <p class="hint" id="storageInfo"></p>
+    <p class="hint">所有记录只存在这台手机的浏览器里，不会上传到任何地方。</p>
+  </section>
+</div>
+
+<div class="lightbox" id="lightbox" hidden><div><img id="lbImg" alt=""><div class="cap" id="lbCap"></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="jszip.min.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const ANGLES = [["front", "正面"], ["side", "侧面"], ["back", "背面"]];
+  const WD = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+  // ---------- IndexedDB ----------
+  let idb;
+  function openDB() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("body-log", 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        d.createObjectStore("notes", { keyPath: "id" });
+        d.createObjectStore("daily", { keyPath: "day" });
+        d.createObjectStore("blobs", { keyPath: "id" });
+        d.createObjectStore("meta", { keyPath: "key" });
+      };
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  }
+  function tx(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = idb.transaction(store, mode), s = t.objectStore(store); let out;
+      const r = fn(s); if (r) r.onsuccess = () => out = r.result;
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  }
+  const getAll = (s) => tx(s, "readonly", (st) => st.getAll());
+  const put = (s, v) => tx(s, "readwrite", (st) => st.put(v));
+  const del = (s, k) => tx(s, "readwrite", (st) => st.delete(k));
+  const get = (s, k) => tx(s, "readonly", (st) => st.get(k));
+
+  // ---------- state ----------
+  let daily = new Map(), notes = [], meta = {};
+  let tab = "today", sel = logicalDay(Date.now()), weekOffset = 0;
+  let dirty = false, tea = null, pending = [], wallMode = "all", cmpA = null, cmpB = null;
+  const urlCache = new Map();
+
+  // ---------- helpers ----------
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function keyOf(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function logicalDay(ts) { return keyOf(new Date(ts - 4 * 3600e3)); }
+  function parseKey(k) { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); }
+  function addDays(k, n) { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); }
+  function md(k) { const d = parseKey(k); return (d.getMonth() + 1) + "月" + d.getDate() + "日"; }
+  function wd(k) { return WD[parseKey(k).getDay()]; }
+  function hm(ts) { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2400); }
+  function el(tag, attrs = {}, ...kids) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+      else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v !== null && v !== undefined && v !== false) e.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of kids) if (c) e.append(c);
+    return e;
+  }
+  async function blobURL(id) {
+    if (urlCache.has(id)) return urlCache.get(id);
+    const rec = await get("blobs", id);
+    const u = rec ? URL.createObjectURL(rec.blob) : null;
+    urlCache.set(id, u); return u;
+  }
+  function media(tag, id, attrs = {}) {
+    const e = el(tag, attrs);
+    blobURL(id).then((u) => { if (u) e.src = u; });
+    return e;
+  }
+  async function persist() { try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} }
+
+  // ---------- tabs ----------
+  function setTab(t) {
+    tab = t;
+    for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", b.dataset.tab === t);
+    for (const v of ["today", "timeline", "wall", "backup"]) $("view-" + v).hidden = v !== t;
+    try { localStorage.setItem("tab", t); } catch (e) {}
+    render(); window.scrollTo(0, 0);
+  }
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+  $("exportNagBtn").addEventListener("click", () => setTab("backup"));
+
+  // ---------- files ----------
+  async function compress(file) {
+    let src;
+    try { src = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    catch (e) { src = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
+    const w = src.width, h = src.height, s = Math.min(1, 1600 / Math.max(w, h));
+    const c = document.createElement("canvas"); c.width = Math.round(w * s); c.height = Math.round(h * s);
+    c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob(res, "image/jpeg", 0.82));
+  }
+  async function storeFile(file) {
+    const id = uid();
+    if (file.type.startsWith("video/")) {
+      if (file.size > 80 * 1024 * 1024) throw new Error("视频超过 80MB，太占手机空间了，剪短一点再传。");
+      await put("blobs", { id, blob: file, type: file.type || "video/mp4" });
+      return { id, kind: "video" };
+    }
+    const b = await compress(file);
+    await put("blobs", { id, blob: b, type: "image/jpeg" });
+    return { id, kind: "image" };
+  }
+
+  // ---------- composer ----------
+  $("attachBtn").addEventListener("click", () => $("attachInput").click());
+  $("attachInput").addEventListener("change", (ev) => {
+    for (const f of ev.target.files) pending.push({ file: f, url: URL.createObjectURL(f) });
+    ev.target.value = ""; renderAttach();
+  });
+  function renderAttach() {
+    const box = $("attachList"); box.replaceChildren();
+    pending.forEach((p, i) => {
+      const m = p.file.type.startsWith("video/") ? el("video", { src: p.url, muted: true }) : el("img", { src: p.url, alt: "" });
+      box.append(el("div", { class: "chip" }, m, el("button", { type: "button", "aria-label": "去掉", text: "×", onclick: () => { pending.splice(i, 1); renderAttach(); } })));
+    });
+  }
+  $("sendBtn").addEventListener("click", async () => {
+    const text = $("noteText").value.trim();
+    if (!text && !pending.length) return;
+    const btn = $("sendBtn"); btn.disabled = true; btn.textContent = "保存中…"; $("noteErr").hidden = true;
+    try {
+      const m = [];
+      for (const p of pending) m.push(await storeFile(p.file));
+      const at = Date.now(), n = { id: uid(), text, media: m, at, day: logicalDay(at) };
+      await put("notes", n); notes.push(n); persist();
+      $("noteText").value = ""; pending = []; renderAttach(); toast("记下了"); render();
+    } catch (e) { $("noteErr").textContent = e.message || "保存失败，手机空间可能不够了。"; $("noteErr").hidden = false; }
+    btn.disabled = false; btn.textContent = "记下";
+  });
+
+  // ---------- daily form ----------
+  const FIELDS = ["fWeight", "fWaist", "fSleep", "fSys", "fDia", "fSpecial"];
+  for (const id of FIELDS) $(id).addEventListener("input", () => { dirty = true; updateKg(); $("saveState").textContent = "还没保存"; });
+  function updateKg() { const v = parseFloat($("fWeight").value); $("kgSub").textContent = v > 0 ? "≈ " + (v / 2).toFixed(1) + " kg" : ""; }
+  function setTea(v) { tea = v; $("fTea").textContent = v === null ? "—" : v; }
+  $("teaPlus").addEventListener("click", () => { setTea((tea || 0) + 1); dirty = true; $("saveState").textContent = "还没保存"; });
+  $("teaMinus").addEventListener("click", () => { setTea(tea ? tea - 1 : 0); dirty = true; $("saveState").textContent = "还没保存"; });
+  function fillForm() {
+    const d = daily.get(sel) || {};
+    $("fWeight").value = d.weight ?? ""; $("fWaist").value = d.waist ?? ""; $("fSleep").value = d.sleep ?? "";
+    $("fSys").value = d.bpSys ?? ""; $("fDia").value = d.bpDia ?? ""; $("fSpecial").value = d.special ?? "";
+    setTea(d.milkTea ?? null); updateKg(); dirty = false;
+    $("saveState").textContent = d.updatedAt ? md(sel) + " 已保存 · " + hm(d.updatedAt) : md(sel) + " · 每项都可以不填";
+    renderShots();
+  }
+  function num(id) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : null; }
+  async function writeDay(day, patch) {
+    const next = { ...(daily.get(day) || {}), ...patch, day, updatedAt: Date.now() };
+    await put("daily", next); daily.set(day, next); persist();
+  }
+  $("saveBtn").addEventListener("click", async () => {
+    try {
+      await writeDay(sel, { weight: num("fWeight"), waist: num("fWaist"), sleep: $("fSleep").value || null, milkTea: tea,
+        bpSys: num("fSys"), bpDia: num("fDia"), special: $("fSpecial").value.trim() || null });
+      dirty = false; $("saveState").textContent = md(sel) + " 已保存 · " + hm(Date.now()); toast(md(sel) + " 已保存"); renderStrip();
+    } catch (e) { toast("保存失败，手机空间可能不够了"); }
+  });
+
+  let shotAngle = null;
+  function renderShots() {
+    const ph = (daily.get(sel) || {}).photos || {}, box = $("shots"); box.replaceChildren();
+    for (const [k, name] of ANGLES) {
+      const b = el("button", { type: "button", class: "shot", "aria-label": name + "照片" });
+      if (ph[k]) b.append(media("img", ph[k], { alt: name }));
+      else b.append(el("div", { class: "empty" }, el("b", { text: "＋" }), el("span", { text: name })));
+      b.append(el("span", { class: "lab", text: name }));
+      b.addEventListener("click", () => { shotAngle = k; $("shotInput").click(); });
+      box.append(b);
+    }
+  }
+  $("shotInput").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = "";
+    if (!f || !shotAngle) return;
+    try {
+      const r = await storeFile(f), day = sel, cur = daily.get(day) || {};
+      const old = (cur.photos || {})[shotAngle];
+      await writeDay(day, { photos: { ...(cur.photos || {}), [shotAngle]: r.id } });
+      if (old) { await del("blobs", old); urlCache.delete(old); }
+      toast("照片已保存"); renderShots(); renderStrip();
+    } catch (e) { toast("照片保存失败"); }
+  });
+
+  function filled(d) { return d && (d.weight != null || d.waist != null || d.sleep || d.milkTea != null || d.bpSys != null || d.special || (d.photos && Object.keys(d.photos).length)); }
+  function renderStrip() {
+    const end = addDays(logicalDay(Date.now()), -7 * weekOffset), box = $("strip"); box.replaceChildren();
+    for (let i = 6; i >= 0; i--) {
+      const k = addDays(end, -i);
+      const b = el("button", { type: "button", "aria-pressed": String(k === sel), "aria-label": md(k) },
+        el("span", { class: "wd", text: i === 0 && weekOffset === 0 ? "今天" : wd(k) }),
+        el("span", { class: "dd", text: String(parseKey(k).getDate()) }),
+        el("span", { class: "dot" + (filled(daily.get(k)) ? " on" : "") }));
+      b.addEventListener("click", () => { if (dirty && !confirmSwitch()) return; sel = k; fillForm(); renderStrip(); });
+      box.append(b);
+    }
+    $("nextWeek").style.visibility = weekOffset === 0 ? "hidden" : "visible";
+  }
+  let switchArmed = 0;
+  function confirmSwitch() { if (Date.now() - switchArmed < 3000) return true; switchArmed = Date.now(); toast("这天还没保存，再点一次就切过去"); return false; }
+  $("prevWeek").addEventListener("click", () => { weekOffset++; renderStrip(); });
+  $("nextWeek").addEventListener("click", () => { if (weekOffset) weekOffset--; renderStrip(); });
+
+  // ---------- timeline ----------
+  function dayPills(d) {
+    const p = el("div", { class: "pills" });
+    const add = (label, val) => p.append(el("span", { class: "pill" }, label, val != null ? el("b", { text: val }) : null));
+    if (d.weight != null) add("体重", d.weight + " 斤");
+    if (d.waist != null) add("腰围", d.waist + " cm");
+    if (d.sleep) add("睡", d.sleep);
+    if (d.milkTea != null) add("奶茶", d.milkTea + " 杯");
+    if (d.bpSys != null || d.bpDia != null) add("血压", (d.bpSys ?? "?") + "/" + (d.bpDia ?? "?"));
+    if (d.photos && Object.keys(d.photos).length) add("三视图 " + Object.keys(d.photos).length + " 张", null);
+    return p;
+  }
+  function renderTimeline() {
+    const box = $("timeline"); box.replaceChildren();
+    const list = [...new Set([...daily.keys(), ...notes.map((n) => n.day)])].sort().reverse();
+    if (!list.length) { box.append(el("div", { class: "empty-state", text: "还没有记录。去「今天」写一句随手记，或者填一下基础表，就会出现在这里。" })); return; }
+    const wrap = el("div", { style: "display:grid;gap:22px" });
+    for (const k of list) {
+      const sec = el("div", { class: "day" }, el("div", { class: "day-head" }, el("span", { class: "d", text: md(k) }), el("span", { class: "w", text: wd(k) })));
+      const d = daily.get(k);
+      if (d) { sec.append(dayPills(d)); if (d.special) sec.append(el("div", { class: "pills" }, el("span", { class: "pill flag", text: "特别情况：" + d.special }))); }
+      for (const n of notes.filter((n) => n.day === k).sort((a, b) => a.at - b.at)) sec.append(noteCard(n));
+      wrap.append(sec);
+    }
+    box.append(wrap);
+  }
+  function noteCard(n) {
+    let armed = 0;
+    const delBtn = el("button", { type: "button", class: "linkbtn", text: "删除" });
+    delBtn.addEventListener("click", async () => {
+      if (Date.now() - armed > 3000) { armed = Date.now(); delBtn.textContent = "确认删除"; delBtn.classList.add("armed"); setTimeout(() => { delBtn.textContent = "删除"; delBtn.classList.remove("armed"); }, 3000); return; }
+      await del("notes", n.id); for (const m of n.media || []) { await del("blobs", m.id); urlCache.delete(m.id); }
+      notes = notes.filter((x) => x.id !== n.id); toast("已删除"); render();
+    });
+    const card = el("div", { class: "note" }, el("div", { class: "meta" }, el("time", { text: hm(n.at) }), delBtn));
+    if (n.text) card.append(el("div", { class: "txt", text: n.text }));
+    if (n.media && n.media.length) {
+      const m = el("div", { class: "media" });
+      for (const x of n.media) {
+        if (x.kind === "video") m.append(media("video", x.id, { controls: true, preload: "metadata", playsinline: true }));
+        else { const i = media("img", x.id, { alt: "" }); i.addEventListener("click", () => openLB(x.id, md(n.day) + " " + hm(n.at))); m.append(i); }
+      }
+      card.append(m);
+    }
+    return card;
+  }
+
+  // ---------- wall ----------
+  document.querySelectorAll("#wallMode button").forEach((b) => b.addEventListener("click", () => {
+    wallMode = b.dataset.mode; document.querySelectorAll("#wallMode button").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderWall();
+  }));
+  const wtxt = (d) => d.weight != null ? d.weight + " 斤" : "";
+  function photoDays() { return [...daily.values()].filter((d) => d.photos && Object.keys(d.photos).length).sort((a, b) => a.day < b.day ? 1 : -1); }
+  function tile(id, label, cap, isDate) {
+    if (!id) return el("div", { class: "tile none", text: "没拍" });
+    const b = el("button", { type: "button", class: "tile" }, media("img", id, { alt: cap }), el("span", { class: "lab" + (isDate ? " date" : ""), text: label }));
+    b.addEventListener("click", () => openLB(id, cap)); return b;
+  }
+  function renderWall() {
+    const box = $("wall"); box.replaceChildren();
+    const rows = photoDays();
+    if (!rows.length) { box.append(el("div", { class: "empty-state", text: "还没有三视图。在「今天」的基础表里拍一组正面、侧面、背面，这里就会排出来。" })); return; }
+    if (wallMode === "cmp") return renderCmp(box, rows);
+    if (wallMode === "all") {
+      const g = el("div", { style: "display:grid;gap:18px" });
+      for (const d of rows) {
+        const grid = el("div", { class: "wall-grid" });
+        for (const [a, name] of ANGLES) grid.append(tile(d.photos[a], name, md(d.day) + " · " + name));
+        g.append(el("div", { class: "wall-row" }, el("div", { class: "cap" }, el("span", { class: "d", text: md(d.day) }), el("span", { class: "kg", text: wtxt(d) })), grid));
+      }
+      box.append(g);
+    } else {
+      const name = ANGLES.find((a) => a[0] === wallMode)[1], grid = el("div", { class: "wall-grid" });
+      for (const d of rows) if (d.photos[wallMode]) grid.append(tile(d.photos[wallMode], md(d.day), md(d.day) + " · " + name + (wtxt(d) ? " · " + wtxt(d) : ""), true));
+      box.append(grid.childElementCount ? grid : el("div", { class: "empty-state", text: "还没有" + name + "照片。" }));
+    }
+  }
+  function renderCmp(box, rows) {
+    const keys = rows.map((r) => r.day).sort();
+    if (keys.length < 2) { box.append(el("div", { class: "empty-state", text: "至少要有两天的三视图才能对比。下次拍完再来看。" })); return; }
+    if (!keys.includes(cmpA)) cmpA = keys[0];
+    if (!keys.includes(cmpB)) cmpB = keys[keys.length - 1];
+    const mk = (val, on) => { const s = el("select"); for (const k of keys) { const o = el("option", { value: k, text: md(k) }); if (k === val) o.selected = true; s.append(o); } s.addEventListener("change", () => { on(s.value); renderWall(); }); return s; };
+    box.append(el("div", { class: "cmp-pick" }, mk(cmpA, (v) => cmpA = v), el("span", { class: "hint", text: "对比" }), mk(cmpB, (v) => cmpB = v)));
+    const A = daily.get(cmpA), B = daily.get(cmpB), c = el("div", { style: "display:grid;gap:8px;margin-top:12px" });
+    c.append(el("div", { class: "cmp-head" }, el("span", { text: wtxt(A) || md(cmpA) }), el("span", { class: "kg", text: wtxt(B) || md(cmpB) })));
+    for (const [a, name] of ANGLES) c.append(el("div", { class: "cmp-line" }, tile(A.photos[a], name, md(cmpA) + " · " + name), tile(B.photos[a], name, md(cmpB) + " · " + name)));
+    if (A.weight != null && B.weight != null) {
+      const diff = +(B.weight - A.weight).toFixed(1);
+      c.append(el("p", { class: "hint", style: "margin:4px 0 0", text: md(cmpA) + " 到 " + md(cmpB) + "，体重" + (diff <= 0 ? "减了 " + Math.abs(diff) : "多了 " + diff) + " 斤" }));
+    }
+    box.append(c);
+  }
+
+  // ---------- lightbox ----------
+  async function openLB(id, cap) { $("lbImg").src = await blobURL(id) || ""; $("lbCap").textContent = cap; $("lightbox").hidden = false; }
+  $("lightbox").addEventListener("click", () => { $("lightbox").hidden = true; });
+
+  // ---------- export / import ----------
+  function stamp() { const d = new Date(); return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); }
+  function recordsJSON() {
+    const days = [...daily.values()].sort((a, b) => a.day < b.day ? -1 : 1).map((d) => {
+      const o = { ...d }; o.photos = d.photos ? Object.keys(d.photos).map((k) => ANGLES.find((a) => a[0] === k)[1]) : []; delete o.updatedAt; return o;
+    });
+    const ns = [...notes].sort((a, b) => a.at - b.at).map((n) => ({ day: n.day, time: hm(n.at), text: n.text, attachments: (n.media || []).map((m) => m.kind === "video" ? "视频" : "照片") }));
+    return JSON.stringify({ app: "身体日志", kind: "records", exportedAt: new Date().toISOString(), unit: { weight: "斤", waist: "cm", bp: "mmHg" }, daily: days, notes: ns }, null, 1);
+  }
+  async function saveFile(blob, name) {
+    const file = new File([blob], name, { type: blob.type });
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return "shared"; } }
+    catch (e) { if (e && e.name === "AbortError") return "cancel"; }
+    const a = el("a", { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove();
+    return "downloaded";
+  }
+  async function markExport(kind) { meta[kind] = Date.now(); await put("meta", { key: kind, value: meta[kind] }); renderNag(); renderBackup(); }
+  $("exportRecords").addEventListener("click", async () => {
+    const r = await saveFile(new Blob([recordsJSON()], { type: "application/json" }), "body-log-records-" + stamp() + ".json");
+    if (r === "cancel") return;
+    await markExport("lastRecords"); toast(r === "shared" ? "已导出" : "已保存到手机的下载文件夹");
+  });
+  $("copyRecords").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(recordsJSON()); await markExport("lastRecords"); toast("已复制，去对话里粘贴就行"); }
+    catch (e) { toast("复制失败，用上面的导出按钮吧"); }
+  });
+  $("exportFull").addEventListener("click", async () => {
+    const b = $("exportFull"); b.disabled = true; b.textContent = "打包中…";
+    try {
+      const zip = new JSZip();
+      zip.file("data.json", JSON.stringify({ app: "身体日志", kind: "backup", version: 1, exportedAt: new Date().toISOString(), daily: [...daily.values()], notes }));
+      for (const r of await getAll("blobs")) zip.file("media/" + r.id + (r.type.includes("video") ? ".mp4" : ".jpg"), r.blob);
+      const out = await zip.generateAsync({ type: "blob", mimeType: "application/zip" });
+      const name = "body-log-backup-" + stamp() + ".zip";
+      const a = el("a", { href: URL.createObjectURL(out), download: name }); document.body.append(a); a.click(); a.remove();
+      await markExport("lastFull"); toast("已保存到手机的下载文件夹");
+    } catch (e) { toast("打包失败：" + (e.message || "未知原因")); }
+    b.disabled = false; b.textContent = "导出完整备份";
+  });
+  $("importBtn").addEventListener("click", () => $("importInput").click());
+  $("importInput").addEventListener("change", async (ev) => {
+    const f = ev.target.files[0]; ev.target.value = ""; if (!f) return;
+    $("importState").textContent = "正在恢复…";
+    try {
+      const zip = await JSZip.loadAsync(f), dj = zip.file("data.json");
+      if (!dj) throw new Error("这不是身体日志的备份文件");
+      const data = JSON.parse(await dj.async("string"));
+      let nd = 0, nn = 0, nb = 0;
+      for (const path of Object.keys(zip.files)) {
+        const m = path.match(/^media\/([^.\/]+)\.(jpg|mp4)$/); if (!m) continue;
+        if (await get("blobs", m[1])) continue;
+        const blob = await zip.file(path).async("blob");
+        await put("blobs", { id: m[1], blob: new Blob([blob], { type: m[2] === "mp4" ? "video/mp4" : "image/jpeg" }), type: m[2] === "mp4" ? "video/mp4" : "image/jpeg" }); nb++;
+      }
+      for (const d of data.daily || []) {
+        const cur = daily.get(d.day);
+        if (!cur) { await put("daily", d); daily.set(d.day, d); nd++; }
+        else {
+          const merged = { ...d, ...cur, photos: { ...(d.photos || {}), ...(cur.photos || {}) } };
+          await put("daily", merged); daily.set(d.day, merged); nd++;
+        }
+      }
+      const have = new Set(notes.map((n) => n.id));
+      for (const n of data.notes || []) if (!have.has(n.id)) { await put("notes", n); notes.push(n); nn++; }
+      persist();
+      $("importState").textContent = "恢复完成：" + nd + " 天基础表，" + nn + " 条随手记，" + nb + " 个照片/视频。";
+      fillForm(); render();
+    } catch (e) { $("importState").textContent = "恢复失败：" + (e.message || "文件读不了"); }
+  });
+  function ago(ts) { if (!ts) return null; const d = Math.floor((Date.now() - ts) / 86400e3); return d <= 0 ? "今天" : d + " 天前"; }
+  function renderBackup() {
+    const r = ago(meta.lastRecords), f = ago(meta.lastFull);
+    $("lastExport").replaceChildren(
+      "上次发给 Claude：", el("b", { text: r || "还没导出过" }), "　上次完整备份：", el("b", { text: f || "还没做过" }));
+    if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then((e) => {
+      $("storageInfo").textContent = "已占用手机空间约 " + (e.usage / 1048576).toFixed(1) + " MB。";
+    }).catch(() => {});
+  }
+  function renderNag() {
+    const last = meta.lastRecords;
+    const times = [...notes.map((n) => n.at), ...[...daily.values()].map((d) => d.updatedAt || 0).filter(Boolean)];
+    const first = times.length ? Math.min(...times) : null;
+    const days = (Date.now() - (last || first || Date.now())) / 86400e3;
+    const show = !!first && days >= 7;
+    $("exportBadge").hidden = !show; $("exportNag").hidden = !show;
+    $("exportNagText").textContent = last ? "已经 " + Math.floor(days) + " 天没导出了，发给 Claude 看看吧。" : "记了一周了，导出一次发给 Claude 吧。";
+  }
+
+  // ---------- render ----------
+  function render() {
+    const t = logicalDay(Date.now()); $("todayLabel").textContent = md(t) + " " + wd(t);
+    renderNag();
+    if (tab === "today") renderStrip();
+    if (tab === "timeline") renderTimeline();
+    if (tab === "wall") renderWall();
+    if (tab === "backup") renderBackup();
+  }
+
+  // ---------- boot ----------
+  (async () => {
+    try { idb = await openDB(); }
+    catch (e) { document.body.prepend(el("div", { class: "banner", text: "这个浏览器存不了数据（可能开了无痕模式）。换成普通模式的 Chrome 或 Edge 打开。" })); return; }
+    for (const d of await getAll("daily")) daily.set(d.day, d);
+    notes = await getAll("notes");
+    for (const m of await getAll("meta")) meta[m.key] = m.value;
+    try { const t = localStorage.getItem("tab"); if (["today", "timeline", "wall", "backup"].includes(t)) tab = t; } catch (e) {}
+    setTab(tab); fillForm();
+  })();
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
