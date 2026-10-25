@@ -1,6 +1,6 @@
 // 离线缓存：把页面本身存进手机，以后不联网也能打开。
 // 改了页面文件后，把版本号加 1，手机下次联网打开时会自动更新。
-const CACHE = "body-log-v1";
+const CACHE = "body-log-v2";
 const FILES = ["./", "./index.html", "./jszip.min.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

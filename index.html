@@ -77,12 +77,32 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .stepper output { min-width: 40px; text-align: center; font-family: var(--num); font-size: 20px; font-weight: 600; }
 .row textarea { width: 100%; min-height: 54px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 7px 9px; resize: vertical; }
 .row.stack { grid-template-columns: 1fr; gap: 6px; }
-.shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.shots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .shot { position: relative; aspect-ratio: 3 / 4; max-width: 100%; border: 1.5px dashed var(--line); border-radius: 10px; background: var(--bg); overflow: hidden; cursor: pointer; display: grid; place-items: center; padding: 0; }
 .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .shot .lab { position: absolute; left: 6px; bottom: 6px; background: var(--tape); color: var(--tape-ink); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
 .shot .empty { color: var(--muted); font-size: 13px; display: grid; justify-items: center; gap: 2px; }
 .shot .empty b { font-size: 22px; font-weight: 400; line-height: 1; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset:disabled { opacity: .38; pointer-events: none; }
+.lockwrap { position: relative; }
+.lockmsg { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.checkin-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ck-title { font-size: 17px; font-weight: 700; }
+.ck-prog { font-family: var(--num); font-size: 18px; font-weight: 700; color: var(--tape-text); }
+.ck-prog.ok { color: var(--ok); }
+.ck-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+.ck { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.ck.on { background: var(--tape); border-color: var(--tape); color: var(--tape-ink); font-weight: 600; }
+.screen-row { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: start; }
+.shot.screen { aspect-ratio: 9 / 16; }
+.skip { padding: 8px 0 4px; display: grid; gap: 6px; }
+.skip textarea { width: 100%; min-height: 54px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 7px 9px; }
+.strip .dot.half { background: var(--muted); }
+.strip .dot.skip { background: var(--danger); }
+.thumbs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.thumb { flex: 0 0 auto; width: 64px; border: 0; padding: 0; background: none; cursor: pointer; display: grid; gap: 2px; color: var(--muted); font-size: 11px; }
+.thumb img { width: 64px; height: 84px; object-fit: cover; border-radius: 6px; background: var(--sunk); }
 .save-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 
 .day { display: grid; gap: 8px; }
@@ -110,7 +130,8 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .wall-row .cap { display: flex; align-items: baseline; gap: 10px; }
 .wall-row .cap .d { font-family: var(--num); font-size: 19px; font-weight: 700; }
 .kg { font-family: var(--num); color: var(--tape-text); font-size: 16px; font-weight: 600; }
-.wall-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.wall-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.wall-grid.three { grid-template-columns: repeat(3, 1fr); }
 .tile { position: relative; aspect-ratio: 3 / 4; max-width: 100%; border-radius: 8px; overflow: hidden; background: var(--sunk); padding: 0; border: 0; cursor: pointer; }
 .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .tile .lab { position: absolute; left: 5px; top: 5px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.55); color: #fff; padding: 0 5px; border-radius: 4px; }
@@ -152,59 +173,96 @@ button, input, textarea, select { font: inherit; color: inherit; }
   <!-- 今天 -->
   <section class="view" id="view-today">
     <div id="exportNag" class="banner" hidden><span id="exportNagText"></span><button type="button" id="exportNagBtn">去导出</button></div>
-    <div>
+
+    <div id="blockNote">
       <h2>随手记</h2>
-      <div class="panel composer">
-        <textarea id="noteText" placeholder="想到啥写啥：骑车 40 分钟、今天奶茶换了三分糖、膝盖有点酸……"></textarea>
-        <div class="bar">
-          <div class="attach-list" id="attachList"></div>
-          <button class="btn" id="attachBtn" type="button">＋ 照片/视频</button>
-          <button class="btn primary" id="sendBtn" type="button">记下</button>
-        </div>
-        <div class="err" id="noteErr" hidden></div>
-        <input type="file" id="attachInput" accept="image/*,video/*" multiple hidden>
+      <div class="lockwrap">
+        <fieldset id="noteSet">
+          <div class="panel composer">
+            <textarea id="noteText" placeholder="想到啥写啥：骑车 40 分钟、今天奶茶换了三分糖、膝盖有点酸……"></textarea>
+            <div class="bar">
+              <div class="attach-list" id="attachList"></div>
+              <button class="btn" id="attachBtn" type="button">＋ 照片/视频</button>
+              <button class="btn primary" id="sendBtn" type="button">记下</button>
+            </div>
+            <div class="err" id="noteErr" hidden></div>
+            <input type="file" id="attachInput" accept="image/*,video/*" multiple hidden>
+          </div>
+        </fieldset>
+        <div class="lockmsg" id="noteLock" hidden>先完成上面的今日打卡，才能记</div>
       </div>
     </div>
 
-    <div>
+    <div id="blockDay">
       <div class="strip-nav">
         <h2 style="margin:0">每日基础表</h2>
         <div><button type="button" id="prevWeek">‹ 前一周</button><button type="button" id="nextWeek">后一周 ›</button></div>
       </div>
       <div class="strip" id="strip"></div>
-    </div>
 
-    <div class="panel">
-      <div class="row"><label for="fWeight">体重</label>
-        <div class="field"><input id="fWeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">斤</span><span class="sub" id="kgSub"></span></div></div>
-      <div class="row"><label for="fWaist">腰围</label>
-        <div class="field"><input id="fWaist" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">cm · 肚脐一圈</span></div></div>
-      <div class="row"><label for="fSleep">昨晚几点睡</label>
-        <div class="field"><input id="fSleep" type="time" style="width:8em"></div></div>
-      <div class="row"><label>奶茶</label>
-        <div class="field"><span class="stepper"><button type="button" id="teaMinus" aria-label="少一杯">−</button><output id="fTea">—</output><button type="button" id="teaPlus" aria-label="多一杯">＋</button></span><span class="unit">杯</span></div></div>
-      <div class="row"><label for="fSys">血压</label>
-        <div class="field"><input id="fSys" type="number" inputmode="numeric" placeholder="高压" style="width:4.6em"><span class="unit">/</span><input id="fDia" type="number" inputmode="numeric" placeholder="低压" style="width:4.6em"><span class="unit">mmHg</span></div></div>
-      <div class="row stack"><label for="fSpecial">特别情况</label>
-        <textarea id="fSpecial" placeholder="暴饮暴食、熬得很晚、生病没练……没有就空着"></textarea></div>
-      <div class="row stack"><label>三视图 <span class="hint">（一周拍一次就够）</span></label>
-        <div class="shots" id="shots"></div></div>
-      <div class="save-bar">
-        <span class="hint" id="saveState">每项都可以不填</span>
-        <button class="btn primary" id="saveBtn" type="button">保存这天</button>
+      <div class="panel" style="margin-top:10px">
+        <div class="checkin-head">
+          <span class="ck-title" id="ckTitle">今日打卡</span>
+          <span class="ck-prog" id="ckProg"></span>
+        </div>
+        <div class="ck-steps" id="ckSteps"></div>
+
+        <div class="row stack"><label>昨天的屏幕使用时间 <span class="hint">（截图）</span></label>
+          <div class="screen-row">
+            <button type="button" class="shot screen" id="screenSlot" aria-label="屏幕使用时间截图"></button>
+            <div class="field" style="align-content:start">
+              <span class="hint" style="width:100%">总时长（可不填，看截图也行）</span>
+              <input id="fScrH" type="number" inputmode="numeric" min="0" max="24" placeholder="0" style="width:3.6em"><span class="unit">小时</span>
+              <input id="fScrM" type="number" inputmode="numeric" min="0" max="59" placeholder="0" style="width:3.6em"><span class="unit">分</span>
+            </div>
+          </div>
+        </div>
+        <div class="row"><label for="fWeight">体重</label>
+          <div class="field"><input id="fWeight" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">斤</span><span class="sub" id="kgSub"></span></div></div>
+        <div class="row stack"><label>素颜正脸 + 三视图</label>
+          <div class="shots" id="shots"></div></div>
+        <div class="skip" id="skipBox">
+          <button type="button" class="linkbtn" id="skipOpen">今天特殊，没法打卡？</button>
+          <div id="skipForm" hidden>
+            <textarea id="skipReason" placeholder="写一下原因，比如：出差住酒店、在老家、生病……"></textarea>
+            <div class="save-bar" style="margin-top:6px"><span class="hint">跳过的这天会在时间线上标出来</span><button type="button" class="btn" id="skipConfirm">确认跳过</button></div>
+          </div>
+          <div class="pills" id="skipShown" hidden></div>
+        </div>
+
+        <div class="lockwrap" style="margin-top:6px">
+          <fieldset id="restSet">
+            <div class="row"><label for="fWaist">腰围</label>
+              <div class="field"><input id="fWaist" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">cm · 肚脐一圈</span></div></div>
+            <div class="row"><label for="fSleep">昨晚几点睡</label>
+              <div class="field"><input id="fSleep" type="time" style="width:8em"></div></div>
+            <div class="row"><label>奶茶</label>
+              <div class="field"><span class="stepper"><button type="button" id="teaMinus" aria-label="少一杯">−</button><output id="fTea">—</output><button type="button" id="teaPlus" aria-label="多一杯">＋</button></span><span class="unit">杯</span></div></div>
+            <div class="row"><label for="fSys">血压</label>
+              <div class="field"><input id="fSys" type="number" inputmode="numeric" placeholder="高压" style="width:4.6em"><span class="unit">/</span><input id="fDia" type="number" inputmode="numeric" placeholder="低压" style="width:4.6em"><span class="unit">mmHg</span></div></div>
+            <div class="row stack"><label for="fSpecial">特别情况</label>
+              <textarea id="fSpecial" placeholder="暴饮暴食、熬得很晚、生病没练……没有就空着"></textarea></div>
+          </fieldset>
+          <div class="lockmsg" id="restLock" hidden>完成今日打卡后解锁</div>
+        </div>
+        <div class="save-bar">
+          <span class="hint" id="saveState">每项都可以不填</span>
+          <button class="btn primary" id="saveBtn" type="button">保存这天</button>
+        </div>
+        <input type="file" id="shotInput" accept="image/*" hidden>
       </div>
-      <input type="file" id="shotInput" accept="image/*" hidden>
+      <p class="hint" style="margin:8px 0 0">凌晨 4 点前算前一天。只有"今天"要先打卡，补填以前的日子不受限制。</p>
     </div>
-    <p class="hint" style="margin:0">凌晨 4 点前记的，算前一天。</p>
   </section>
 
-  <!-- 时间线 -->
+<!-- 时间线 -->
   <section class="view" id="view-timeline" hidden><div id="timeline"></div></section>
 
   <!-- 照片墙 -->
   <section class="view" id="view-wall" hidden>
     <div class="seg" id="wallMode">
       <button type="button" data-mode="all" aria-pressed="true">全部</button>
+      <button type="button" data-mode="face" aria-pressed="false">脸</button>
       <button type="button" data-mode="front" aria-pressed="false">正面</button>
       <button type="button" data-mode="side" aria-pressed="false">侧面</button>
       <button type="button" data-mode="back" aria-pressed="false">背面</button>
@@ -218,13 +276,14 @@ button, input, textarea, select { font: inherit; color: inherit; }
     <div class="panel backup">
       <h2 style="margin:0">发给 Claude</h2>
       <p class="status" id="lastExport"></p>
-      <p class="hint">只有文字和数字，文件很小。每周导出一次，发到电脑上，再传给 Claude。</p>
-      <button class="btn primary wide" id="exportRecords" type="button">导出记录</button>
-      <button class="btn wide" id="copyRecords" type="button">复制记录文字（直接粘贴到对话里）</button>
+      <p class="hint">打包成一个 zip：记录文字加上这段时间的照片和截图（视频不放）。每周导出一次，发到电脑上，再传给 Claude。</p>
+      <button class="btn primary wide" id="exportRecords" type="button">导出记录（上次导出以来）</button>
+      <button class="btn wide" id="exportAllRecords" type="button">导出全部记录</button>
+      <button class="btn wide" id="copyRecords" type="button">只复制文字（直接粘贴到对话里）</button>
     </div>
     <div class="panel backup">
       <h2 style="margin:0">完整备份</h2>
-      <p class="hint">记录加所有照片和视频，打包成一个 zip。换手机、清浏览器数据之前一定要做一次，平时一个月做一次就行，自己存好。</p>
+      <p class="hint">所有记录、照片和视频，打包成一个 zip。换手机、清浏览器数据之前一定要做一次，平时一个月做一次，自己存好。</p>
       <button class="btn wide" id="exportFull" type="button">导出完整备份</button>
       <button class="btn wide" id="importBtn" type="button">从备份恢复</button>
       <input type="file" id="importInput" accept=".zip,application/zip" hidden>
@@ -242,7 +301,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const ANGLES = [["front", "正面"], ["side", "侧面"], ["back", "背面"]];
+  const SHOTS = [["face", "素颜脸"], ["front", "正面"], ["side", "侧面"], ["back", "背面"]];
   const WD = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
   // ---------- IndexedDB ----------
@@ -282,13 +341,15 @@ button, input, textarea, select { font: inherit; color: inherit; }
   function pad(n) { return String(n).padStart(2, "0"); }
   function keyOf(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function logicalDay(ts) { return keyOf(new Date(ts - 4 * 3600e3)); }
+  const today = () => logicalDay(Date.now());
   function parseKey(k) { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); }
   function addDays(k, n) { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); }
   function md(k) { const d = parseKey(k); return (d.getMonth() + 1) + "月" + d.getDate() + "日"; }
   function wd(k) { return WD[parseKey(k).getDay()]; }
   function hm(ts) { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function dur(min) { const h = Math.floor(min / 60), m = min % 60; return (h ? h + "小时" : "") + (m || !h ? m + "分" : ""); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2400); }
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2600); }
   function el(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -304,12 +365,22 @@ button, input, textarea, select { font: inherit; color: inherit; }
     const u = rec ? URL.createObjectURL(rec.blob) : null;
     urlCache.set(id, u); return u;
   }
-  function media(tag, id, attrs = {}) {
-    const e = el(tag, attrs);
-    blobURL(id).then((u) => { if (u) e.src = u; });
-    return e;
-  }
+  function media(tag, id, attrs = {}) { const e = el(tag, attrs); blobURL(id).then((u) => { if (u) e.src = u; }); return e; }
   async function persist() { try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} }
+
+  // ---------- check-in ----------
+  function steps(d) {
+    d = d || {}; const ph = d.photos || {};
+    return [
+      ["昨天屏幕时间", !!d.screenPhoto],
+      ["素颜脸照", !!ph.face],
+      ["体重", d.weight != null],
+      ["三视图", !!(ph.front && ph.side && ph.back)],
+    ];
+  }
+  function checkedIn(day) { const d = daily.get(day); return !!d && (!!d.skip || steps(d).every((s) => s[1])); }
+  const locked = () => sel === today() && !checkedIn(today());
+  const todayLocked = () => !checkedIn(today());
 
   // ---------- tabs ----------
   function setTab(t) {
@@ -323,23 +394,23 @@ button, input, textarea, select { font: inherit; color: inherit; }
   $("exportNagBtn").addEventListener("click", () => setTab("backup"));
 
   // ---------- files ----------
-  async function compress(file) {
+  async function compress(file, max = 1600, q = 0.82) {
     let src;
     try { src = await createImageBitmap(file, { imageOrientation: "from-image" }); }
     catch (e) { src = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); }); }
-    const w = src.width, h = src.height, s = Math.min(1, 1600 / Math.max(w, h));
+    const w = src.width, h = src.height, s = Math.min(1, max / Math.max(w, h));
     const c = document.createElement("canvas"); c.width = Math.round(w * s); c.height = Math.round(h * s);
     c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
-    return await new Promise((res) => c.toBlob(res, "image/jpeg", 0.82));
+    return await new Promise((res) => c.toBlob(res, "image/jpeg", q));
   }
-  async function storeFile(file) {
+  async function storeFile(file, max, q) {
     const id = uid();
     if (file.type.startsWith("video/")) {
       if (file.size > 80 * 1024 * 1024) throw new Error("视频超过 80MB，太占手机空间了，剪短一点再传。");
       await put("blobs", { id, blob: file, type: file.type || "video/mp4" });
       return { id, kind: "video" };
     }
-    const b = await compress(file);
+    const b = await compress(file, max, q);
     await put("blobs", { id, blob: b, type: "image/jpeg" });
     return { id, kind: "image" };
   }
@@ -358,6 +429,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
     });
   }
   $("sendBtn").addEventListener("click", async () => {
+    if (todayLocked()) return toast("先完成今日打卡");
     const text = $("noteText").value.trim();
     if (!text && !pending.length) return;
     const btn = $("sendBtn"); btn.disabled = true; btn.textContent = "保存中…"; $("noteErr").hidden = true;
@@ -372,66 +444,119 @@ button, input, textarea, select { font: inherit; color: inherit; }
   });
 
   // ---------- daily form ----------
-  const FIELDS = ["fWeight", "fWaist", "fSleep", "fSys", "fDia", "fSpecial"];
-  for (const id of FIELDS) $(id).addEventListener("input", () => { dirty = true; updateKg(); $("saveState").textContent = "还没保存"; });
+  const FIELDS = ["fWaist", "fSleep", "fSys", "fDia", "fSpecial"];
+  const markDirty = () => { dirty = true; $("saveState").textContent = "还没保存"; };
+  for (const id of FIELDS) $(id).addEventListener("input", markDirty);
+  $("fWeight").addEventListener("input", updateKg);
+  $("fWeight").addEventListener("change", async () => { await writeDay(sel, { weight: num("fWeight") }); afterQuickSave(); });
+  for (const id of ["fScrH", "fScrM"]) $(id).addEventListener("change", async () => { await writeDay(sel, { screenMinutes: scrMin() }); afterQuickSave(); });
+  function afterQuickSave() { $("saveState").textContent = md(sel) + " 已保存 · " + hm(Date.now()); renderLock(); renderStrip(); }
   function updateKg() { const v = parseFloat($("fWeight").value); $("kgSub").textContent = v > 0 ? "≈ " + (v / 2).toFixed(1) + " kg" : ""; }
   function setTea(v) { tea = v; $("fTea").textContent = v === null ? "—" : v; }
-  $("teaPlus").addEventListener("click", () => { setTea((tea || 0) + 1); dirty = true; $("saveState").textContent = "还没保存"; });
-  $("teaMinus").addEventListener("click", () => { setTea(tea ? tea - 1 : 0); dirty = true; $("saveState").textContent = "还没保存"; });
+  $("teaPlus").addEventListener("click", () => { setTea((tea || 0) + 1); markDirty(); });
+  $("teaMinus").addEventListener("click", () => { setTea(tea ? tea - 1 : 0); markDirty(); });
+  function num(id) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : null; }
+  function scrMin() { const h = num("fScrH"), m = num("fScrM"); return h == null && m == null ? null : Math.round((h || 0) * 60 + (m || 0)); }
+
   function fillForm() {
     const d = daily.get(sel) || {};
     $("fWeight").value = d.weight ?? ""; $("fWaist").value = d.waist ?? ""; $("fSleep").value = d.sleep ?? "";
     $("fSys").value = d.bpSys ?? ""; $("fDia").value = d.bpDia ?? ""; $("fSpecial").value = d.special ?? "";
+    $("fScrH").value = d.screenMinutes != null ? Math.floor(d.screenMinutes / 60) : "";
+    $("fScrM").value = d.screenMinutes != null ? d.screenMinutes % 60 : "";
     setTea(d.milkTea ?? null); updateKg(); dirty = false;
-    $("saveState").textContent = d.updatedAt ? md(sel) + " 已保存 · " + hm(d.updatedAt) : md(sel) + " · 每项都可以不填";
-    renderShots();
+    $("saveState").textContent = d.updatedAt ? md(sel) + " 已保存 · " + hm(d.updatedAt) : md(sel) + " · 还没记";
+    $("skipForm").hidden = true; $("skipReason").value = "";
+    renderShots(); renderLock();
   }
-  function num(id) { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : null; }
   async function writeDay(day, patch) {
+    const before = checkedIn(day);
     const next = { ...(daily.get(day) || {}), ...patch, day, updatedAt: Date.now() };
     await put("daily", next); daily.set(day, next); persist();
+    if (day === today() && !before && checkedIn(day)) { toast("今日打卡完成，已经解锁"); render(); }
   }
   $("saveBtn").addEventListener("click", async () => {
-    try {
-      await writeDay(sel, { weight: num("fWeight"), waist: num("fWaist"), sleep: $("fSleep").value || null, milkTea: tea,
-        bpSys: num("fSys"), bpDia: num("fDia"), special: $("fSpecial").value.trim() || null });
-      dirty = false; $("saveState").textContent = md(sel) + " 已保存 · " + hm(Date.now()); toast(md(sel) + " 已保存"); renderStrip();
-    } catch (e) { toast("保存失败，手机空间可能不够了"); }
+    const patch = { weight: num("fWeight"), screenMinutes: scrMin() };
+    if (!locked()) Object.assign(patch, { waist: num("fWaist"), sleep: $("fSleep").value || null, milkTea: tea,
+      bpSys: num("fSys"), bpDia: num("fDia"), special: $("fSpecial").value.trim() || null });
+    try { await writeDay(sel, patch); dirty = false; afterQuickSave(); toast(md(sel) + " 已保存"); }
+    catch (e) { toast("保存失败，手机空间可能不够了"); }
   });
 
-  let shotAngle = null;
+  // photo slots
+  let shotKey = null;
+  function slot(btn, id, label) {
+    btn.replaceChildren();
+    if (id) btn.append(media("img", id, { alt: label }));
+    else btn.append(el("div", { class: "empty" }, el("b", { text: "＋" }), el("span", { text: label })));
+    btn.append(el("span", { class: "lab", text: label }));
+  }
   function renderShots() {
-    const ph = (daily.get(sel) || {}).photos || {}, box = $("shots"); box.replaceChildren();
-    for (const [k, name] of ANGLES) {
+    const d = daily.get(sel) || {}, ph = d.photos || {}, box = $("shots"); box.replaceChildren();
+    for (const [k, name] of SHOTS) {
       const b = el("button", { type: "button", class: "shot", "aria-label": name + "照片" });
-      if (ph[k]) b.append(media("img", ph[k], { alt: name }));
-      else b.append(el("div", { class: "empty" }, el("b", { text: "＋" }), el("span", { text: name })));
-      b.append(el("span", { class: "lab", text: name }));
-      b.addEventListener("click", () => { shotAngle = k; $("shotInput").click(); });
+      slot(b, ph[k], name);
+      b.addEventListener("click", () => { shotKey = k; $("shotInput").click(); });
       box.append(b);
     }
+    slot($("screenSlot"), d.screenPhoto, "截图");
   }
+  $("screenSlot").addEventListener("click", () => { shotKey = "screen"; $("shotInput").click(); });
   $("shotInput").addEventListener("change", async (ev) => {
     const f = ev.target.files[0]; ev.target.value = "";
-    if (!f || !shotAngle) return;
+    if (!f || !shotKey) return;
+    const day = sel, k = shotKey;
     try {
-      const r = await storeFile(f), day = sel, cur = daily.get(day) || {};
-      const old = (cur.photos || {})[shotAngle];
-      await writeDay(day, { photos: { ...(cur.photos || {}), [shotAngle]: r.id } });
+      const r = k === "screen" ? await storeFile(f, 2200, 0.86) : await storeFile(f);
+      const cur = daily.get(day) || {};
+      let old;
+      if (k === "screen") { old = cur.screenPhoto; await writeDay(day, { screenPhoto: r.id }); }
+      else { old = (cur.photos || {})[k]; await writeDay(day, { photos: { ...(cur.photos || {}), [k]: r.id } }); }
       if (old) { await del("blobs", old); urlCache.delete(old); }
-      toast("照片已保存"); renderShots(); renderStrip();
+      if (!$("toast").textContent.includes("解锁") || $("toast").hidden) toast("已保存");
+      renderShots(); renderLock(); renderStrip();
     } catch (e) { toast("照片保存失败"); }
   });
 
-  function filled(d) { return d && (d.weight != null || d.waist != null || d.sleep || d.milkTea != null || d.bpSys != null || d.special || (d.photos && Object.keys(d.photos).length)); }
+  // skip
+  $("skipOpen").addEventListener("click", () => { $("skipForm").hidden = false; $("skipReason").focus(); });
+  $("skipConfirm").addEventListener("click", async () => {
+    const r = $("skipReason").value.trim();
+    if (r.length < 2) return toast("写一句原因才能跳过");
+    await writeDay(sel, { skip: { reason: r, at: Date.now() } });
+    $("skipForm").hidden = true; renderLock(); renderStrip();
+  });
+
+  function renderLock() {
+    const isToday = sel === today(), d = daily.get(sel), st = steps(d);
+    const done = st.filter((s) => s[1]).length, ok = checkedIn(sel);
+    $("ckTitle").textContent = isToday ? "今日打卡" : md(sel) + " 打卡项";
+    $("ckProg").textContent = d && d.skip ? "已跳过" : ok ? "已完成 ✓" : done + " / 4";
+    $("ckProg").className = "ck-prog" + (ok ? " ok" : "");
+    $("ckSteps").replaceChildren(...st.map(([n, f]) => el("span", { class: "ck" + (f ? " on" : "") }, (f ? "✓ " : "") + n)));
+    const lk = locked();
+    $("restSet").disabled = lk; $("restLock").hidden = !lk;
+    const nl = todayLocked();
+    $("noteSet").disabled = nl; $("noteLock").hidden = !nl;
+    $("skipBox").hidden = !isToday || (ok && !(d && d.skip));
+    $("skipOpen").hidden = !!(d && d.skip);
+    const sh = $("skipShown"); sh.hidden = !(d && d.skip);
+    sh.replaceChildren(d && d.skip ? el("span", { class: "pill flag", text: "今天跳过打卡：" + d.skip.reason }) : "");
+    // 没打卡时，基础表放到最上面
+    $("blockDay").style.order = nl ? "1" : "2";
+    $("blockNote").style.order = nl ? "2" : "1";
+  }
+
+  function filled(d) { return d && (d.weight != null || d.waist != null || d.sleep || d.milkTea != null || d.bpSys != null || d.special || d.screenPhoto || d.skip || (d.photos && Object.keys(d.photos).length)); }
   function renderStrip() {
-    const end = addDays(logicalDay(Date.now()), -7 * weekOffset), box = $("strip"); box.replaceChildren();
+    const end = addDays(today(), -7 * weekOffset), box = $("strip"); box.replaceChildren();
     for (let i = 6; i >= 0; i--) {
-      const k = addDays(end, -i);
+      const k = addDays(end, -i), d = daily.get(k);
+      const dot = checkedIn(k) && !(d && d.skip) ? "dot on" : d && d.skip ? "dot skip" : filled(d) ? "dot half" : "dot";
       const b = el("button", { type: "button", "aria-pressed": String(k === sel), "aria-label": md(k) },
         el("span", { class: "wd", text: i === 0 && weekOffset === 0 ? "今天" : wd(k) }),
         el("span", { class: "dd", text: String(parseKey(k).getDate()) }),
-        el("span", { class: "dot" + (filled(daily.get(k)) ? " on" : "") }));
+        el("span", { class: dot }));
       b.addEventListener("click", () => { if (dirty && !confirmSwitch()) return; sel = k; fillForm(); renderStrip(); });
       box.append(b);
     }
@@ -446,23 +571,35 @@ button, input, textarea, select { font: inherit; color: inherit; }
   function dayPills(d) {
     const p = el("div", { class: "pills" });
     const add = (label, val) => p.append(el("span", { class: "pill" }, label, val != null ? el("b", { text: val }) : null));
+    if (d.screenMinutes != null) add("昨天屏幕", dur(d.screenMinutes));
     if (d.weight != null) add("体重", d.weight + " 斤");
     if (d.waist != null) add("腰围", d.waist + " cm");
     if (d.sleep) add("睡", d.sleep);
     if (d.milkTea != null) add("奶茶", d.milkTea + " 杯");
     if (d.bpSys != null || d.bpDia != null) add("血压", (d.bpSys ?? "?") + "/" + (d.bpDia ?? "?"));
-    if (d.photos && Object.keys(d.photos).length) add("三视图 " + Object.keys(d.photos).length + " 张", null);
     return p;
   }
   function renderTimeline() {
     const box = $("timeline"); box.replaceChildren();
     const list = [...new Set([...daily.keys(), ...notes.map((n) => n.day)])].sort().reverse();
-    if (!list.length) { box.append(el("div", { class: "empty-state", text: "还没有记录。去「今天」写一句随手记，或者填一下基础表，就会出现在这里。" })); return; }
+    if (!list.length) { box.append(el("div", { class: "empty-state", text: "还没有记录。去「今天」完成打卡、写一句随手记，就会出现在这里。" })); return; }
     const wrap = el("div", { style: "display:grid;gap:22px" });
     for (const k of list) {
       const sec = el("div", { class: "day" }, el("div", { class: "day-head" }, el("span", { class: "d", text: md(k) }), el("span", { class: "w", text: wd(k) })));
       const d = daily.get(k);
-      if (d) { sec.append(dayPills(d)); if (d.special) sec.append(el("div", { class: "pills" }, el("span", { class: "pill flag", text: "特别情况：" + d.special }))); }
+      if (d) {
+        sec.append(dayPills(d));
+        if (d.skip) sec.append(el("div", { class: "pills" }, el("span", { class: "pill flag", text: "跳过打卡：" + d.skip.reason })));
+        if (d.special) sec.append(el("div", { class: "pills" }, el("span", { class: "pill flag", text: "特别情况：" + d.special })));
+        const ph = d.photos || {}, imgs = [];
+        if (d.screenPhoto) imgs.push([d.screenPhoto, "屏幕时间"]);
+        for (const [a, n] of SHOTS) if (ph[a]) imgs.push([ph[a], n]);
+        if (imgs.length) {
+          const strip = el("div", { class: "thumbs" });
+          for (const [id, n] of imgs) { const b = el("button", { type: "button", class: "thumb" }, media("img", id, { alt: n }), el("span", { text: n })); b.addEventListener("click", () => openLB(id, md(k) + " · " + n)); strip.append(b); }
+          sec.append(strip);
+        }
+      }
       for (const n of notes.filter((n) => n.day === k).sort((a, b) => a.at - b.at)) sec.append(noteCard(n));
       wrap.append(sec);
     }
@@ -503,32 +640,32 @@ button, input, textarea, select { font: inherit; color: inherit; }
   function renderWall() {
     const box = $("wall"); box.replaceChildren();
     const rows = photoDays();
-    if (!rows.length) { box.append(el("div", { class: "empty-state", text: "还没有三视图。在「今天」的基础表里拍一组正面、侧面、背面，这里就会排出来。" })); return; }
+    if (!rows.length) { box.append(el("div", { class: "empty-state", text: "还没有照片。完成一次今日打卡，这里就会排出来。" })); return; }
     if (wallMode === "cmp") return renderCmp(box, rows);
     if (wallMode === "all") {
       const g = el("div", { style: "display:grid;gap:18px" });
       for (const d of rows) {
         const grid = el("div", { class: "wall-grid" });
-        for (const [a, name] of ANGLES) grid.append(tile(d.photos[a], name, md(d.day) + " · " + name));
+        for (const [a, name] of SHOTS) grid.append(tile(d.photos[a], name.replace("素颜", ""), md(d.day) + " · " + name));
         g.append(el("div", { class: "wall-row" }, el("div", { class: "cap" }, el("span", { class: "d", text: md(d.day) }), el("span", { class: "kg", text: wtxt(d) })), grid));
       }
       box.append(g);
     } else {
-      const name = ANGLES.find((a) => a[0] === wallMode)[1], grid = el("div", { class: "wall-grid" });
+      const name = SHOTS.find((a) => a[0] === wallMode)[1], grid = el("div", { class: "wall-grid three" });
       for (const d of rows) if (d.photos[wallMode]) grid.append(tile(d.photos[wallMode], md(d.day), md(d.day) + " · " + name + (wtxt(d) ? " · " + wtxt(d) : ""), true));
       box.append(grid.childElementCount ? grid : el("div", { class: "empty-state", text: "还没有" + name + "照片。" }));
     }
   }
   function renderCmp(box, rows) {
     const keys = rows.map((r) => r.day).sort();
-    if (keys.length < 2) { box.append(el("div", { class: "empty-state", text: "至少要有两天的三视图才能对比。下次拍完再来看。" })); return; }
+    if (keys.length < 2) { box.append(el("div", { class: "empty-state", text: "至少要有两天的照片才能对比。" })); return; }
     if (!keys.includes(cmpA)) cmpA = keys[0];
     if (!keys.includes(cmpB)) cmpB = keys[keys.length - 1];
     const mk = (val, on) => { const s = el("select"); for (const k of keys) { const o = el("option", { value: k, text: md(k) }); if (k === val) o.selected = true; s.append(o); } s.addEventListener("change", () => { on(s.value); renderWall(); }); return s; };
     box.append(el("div", { class: "cmp-pick" }, mk(cmpA, (v) => cmpA = v), el("span", { class: "hint", text: "对比" }), mk(cmpB, (v) => cmpB = v)));
     const A = daily.get(cmpA), B = daily.get(cmpB), c = el("div", { style: "display:grid;gap:8px;margin-top:12px" });
     c.append(el("div", { class: "cmp-head" }, el("span", { text: wtxt(A) || md(cmpA) }), el("span", { class: "kg", text: wtxt(B) || md(cmpB) })));
-    for (const [a, name] of ANGLES) c.append(el("div", { class: "cmp-line" }, tile(A.photos[a], name, md(cmpA) + " · " + name), tile(B.photos[a], name, md(cmpB) + " · " + name)));
+    for (const [a, name] of SHOTS) c.append(el("div", { class: "cmp-line" }, tile(A.photos[a], name, md(cmpA) + " · " + name), tile(B.photos[a], name, md(cmpB) + " · " + name)));
     if (A.weight != null && B.weight != null) {
       const diff = +(B.weight - A.weight).toFixed(1);
       c.append(el("p", { class: "hint", style: "margin:4px 0 0", text: md(cmpA) + " 到 " + md(cmpB) + "，体重" + (diff <= 0 ? "减了 " + Math.abs(diff) : "多了 " + diff) + " 斤" }));
@@ -542,39 +679,65 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
   // ---------- export / import ----------
   function stamp() { const d = new Date(); return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); }
-  function recordsJSON() {
-    const days = [...daily.values()].sort((a, b) => a.day < b.day ? -1 : 1).map((d) => {
-      const o = { ...d }; o.photos = d.photos ? Object.keys(d.photos).map((k) => ANGLES.find((a) => a[0] === k)[1]) : []; delete o.updatedAt; return o;
+  function download(blob, name) { const a = el("a", { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); setTimeout(() => a.remove(), 1000); }
+  // since = 时间戳；只要这之后改过的天和写的随手记。null 表示全部。
+  function buildRecords(since) {
+    const files = [];
+    const days = [...daily.values()].filter((d) => since == null || (d.updatedAt || 0) > since).sort((a, b) => a.day < b.day ? -1 : 1).map((d) => {
+      const o = { day: d.day, weekday: wd(d.day) };
+      if (d.screenPhoto || d.screenMinutes != null) {
+        o.screenTime = { of: addDays(d.day, -1), minutes: d.screenMinutes ?? null };
+        if (d.screenPhoto) { const f = "media/" + d.day + "_screen-of-" + addDays(d.day, -1) + ".jpg"; files.push([f, d.screenPhoto]); o.screenTime.screenshot = f; }
+      }
+      for (const k of ["weight", "waist", "sleep", "milkTea", "special"]) if (d[k] != null) o[k] = d[k];
+      if (d.bpSys != null || d.bpDia != null) o.bloodPressure = (d.bpSys ?? "?") + "/" + (d.bpDia ?? "?");
+      if (d.skip) o.skippedCheckIn = d.skip.reason;
+      const ph = d.photos || {};
+      if (Object.keys(ph).length) { o.photos = {}; for (const [k] of SHOTS) if (ph[k]) { const f = "media/" + d.day + "_" + k + ".jpg"; files.push([f, ph[k]]); o.photos[k] = f; } }
+      return o;
     });
-    const ns = [...notes].sort((a, b) => a.at - b.at).map((n) => ({ day: n.day, time: hm(n.at), text: n.text, attachments: (n.media || []).map((m) => m.kind === "video" ? "视频" : "照片") }));
-    return JSON.stringify({ app: "身体日志", kind: "records", exportedAt: new Date().toISOString(), unit: { weight: "斤", waist: "cm", bp: "mmHg" }, daily: days, notes: ns }, null, 1);
-  }
-  async function saveFile(blob, name) {
-    const file = new File([blob], name, { type: blob.type });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return "shared"; } }
-    catch (e) { if (e && e.name === "AbortError") return "cancel"; }
-    const a = el("a", { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove();
-    return "downloaded";
+    const ns = notes.filter((n) => since == null || n.at > since).sort((a, b) => a.at - b.at).map((n) => {
+      const o = { day: n.day, time: hm(n.at), text: n.text }, imgs = [];
+      let vids = 0;
+      (n.media || []).forEach((m, i) => {
+        if (m.kind === "video") { vids++; return; }
+        const f = "media/" + n.day + "_" + hm(n.at).replace(":", "") + "_" + (i + 1) + ".jpg"; files.push([f, m.id]); imgs.push(f);
+      });
+      if (imgs.length) o.images = imgs;
+      if (vids) o.videosNotExported = vids;
+      return o;
+    });
+    const json = JSON.stringify({ app: "身体日志", kind: "records", exportedAt: new Date().toISOString(), range: since ? "since " + new Date(since).toISOString() : "all",
+      unit: { weight: "斤", waist: "cm", bloodPressure: "mmHg", screenTime: "分钟，记的是前一天" }, daily: days, notes: ns }, null, 1);
+    return { json, files };
   }
   async function markExport(kind) { meta[kind] = Date.now(); await put("meta", { key: kind, value: meta[kind] }); renderNag(); renderBackup(); }
-  $("exportRecords").addEventListener("click", async () => {
-    const r = await saveFile(new Blob([recordsJSON()], { type: "application/json" }), "body-log-records-" + stamp() + ".json");
-    if (r === "cancel") return;
-    await markExport("lastRecords"); toast(r === "shared" ? "已导出" : "已保存到手机的下载文件夹");
-  });
+  async function exportRecords(since, btn) {
+    const label = btn.textContent; btn.disabled = true; btn.textContent = "打包中…";
+    try {
+      const { json, files } = buildRecords(since);
+      const zip = new JSZip(); zip.file("records.json", json);
+      for (const [name, id] of files) { const r = await get("blobs", id); if (r) zip.file(name, r.blob); }
+      const out = await zip.generateAsync({ type: "blob", mimeType: "application/zip" });
+      download(out, "body-log-records-" + stamp() + ".zip");
+      await markExport("lastRecords"); toast("已保存到手机的下载文件夹（" + (out.size / 1048576).toFixed(1) + " MB）");
+    } catch (e) { toast("导出失败：" + (e.message || "未知原因")); }
+    btn.disabled = false; btn.textContent = label;
+  }
+  $("exportRecords").addEventListener("click", (e) => exportRecords(meta.lastRecords || null, e.currentTarget));
+  $("exportAllRecords").addEventListener("click", (e) => exportRecords(null, e.currentTarget));
   $("copyRecords").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(recordsJSON()); await markExport("lastRecords"); toast("已复制，去对话里粘贴就行"); }
+    try { await navigator.clipboard.writeText(buildRecords(null).json); toast("已复制，去对话里粘贴就行"); }
     catch (e) { toast("复制失败，用上面的导出按钮吧"); }
   });
   $("exportFull").addEventListener("click", async () => {
     const b = $("exportFull"); b.disabled = true; b.textContent = "打包中…";
     try {
       const zip = new JSZip();
-      zip.file("data.json", JSON.stringify({ app: "身体日志", kind: "backup", version: 1, exportedAt: new Date().toISOString(), daily: [...daily.values()], notes }));
+      zip.file("data.json", JSON.stringify({ app: "身体日志", kind: "backup", version: 2, exportedAt: new Date().toISOString(), daily: [...daily.values()], notes }));
       for (const r of await getAll("blobs")) zip.file("media/" + r.id + (r.type.includes("video") ? ".mp4" : ".jpg"), r.blob);
       const out = await zip.generateAsync({ type: "blob", mimeType: "application/zip" });
-      const name = "body-log-backup-" + stamp() + ".zip";
-      const a = el("a", { href: URL.createObjectURL(out), download: name }); document.body.append(a); a.click(); a.remove();
+      download(out, "body-log-backup-" + stamp() + ".zip");
       await markExport("lastFull"); toast("已保存到手机的下载文件夹");
     } catch (e) { toast("打包失败：" + (e.message || "未知原因")); }
     b.disabled = false; b.textContent = "导出完整备份";
@@ -585,22 +748,20 @@ button, input, textarea, select { font: inherit; color: inherit; }
     $("importState").textContent = "正在恢复…";
     try {
       const zip = await JSZip.loadAsync(f), dj = zip.file("data.json");
-      if (!dj) throw new Error("这不是身体日志的备份文件");
+      if (!dj) throw new Error(zip.file("records.json") ? "这是发给 Claude 的记录包，不是完整备份，恢复要用「完整备份」导出的文件" : "这不是身体日志的备份文件");
       const data = JSON.parse(await dj.async("string"));
       let nd = 0, nn = 0, nb = 0;
       for (const path of Object.keys(zip.files)) {
         const m = path.match(/^media\/([^.\/]+)\.(jpg|mp4)$/); if (!m) continue;
         if (await get("blobs", m[1])) continue;
+        const type = m[2] === "mp4" ? "video/mp4" : "image/jpeg";
         const blob = await zip.file(path).async("blob");
-        await put("blobs", { id: m[1], blob: new Blob([blob], { type: m[2] === "mp4" ? "video/mp4" : "image/jpeg" }), type: m[2] === "mp4" ? "video/mp4" : "image/jpeg" }); nb++;
+        await put("blobs", { id: m[1], blob: new Blob([blob], { type }), type }); nb++;
       }
       for (const d of data.daily || []) {
         const cur = daily.get(d.day);
-        if (!cur) { await put("daily", d); daily.set(d.day, d); nd++; }
-        else {
-          const merged = { ...d, ...cur, photos: { ...(d.photos || {}), ...(cur.photos || {}) } };
-          await put("daily", merged); daily.set(d.day, merged); nd++;
-        }
+        const merged = cur ? { ...d, ...cur, photos: { ...(d.photos || {}), ...(cur.photos || {}) } } : d;
+        await put("daily", merged); daily.set(d.day, merged); nd++;
       }
       const have = new Set(notes.map((n) => n.id));
       for (const n of data.notes || []) if (!have.has(n.id)) { await put("notes", n); notes.push(n); nn++; }
@@ -612,8 +773,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   function ago(ts) { if (!ts) return null; const d = Math.floor((Date.now() - ts) / 86400e3); return d <= 0 ? "今天" : d + " 天前"; }
   function renderBackup() {
     const r = ago(meta.lastRecords), f = ago(meta.lastFull);
-    $("lastExport").replaceChildren(
-      "上次发给 Claude：", el("b", { text: r || "还没导出过" }), "　上次完整备份：", el("b", { text: f || "还没做过" }));
+    $("lastExport").replaceChildren("上次发给 Claude：", el("b", { text: r || "还没导出过" }), "　上次完整备份：", el("b", { text: f || "还没做过" }));
     if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then((e) => {
       $("storageInfo").textContent = "已占用手机空间约 " + (e.usage / 1048576).toFixed(1) + " MB。";
     }).catch(() => {});
@@ -629,14 +789,17 @@ button, input, textarea, select { font: inherit; color: inherit; }
   }
 
   // ---------- render ----------
+  let lastDay = today();
   function render() {
-    const t = logicalDay(Date.now()); $("todayLabel").textContent = md(t) + " " + wd(t);
+    const t = today(); $("todayLabel").textContent = md(t) + " " + wd(t);
+    if (t !== lastDay) { if (sel === lastDay) { sel = t; fillForm(); } lastDay = t; }
     renderNag();
-    if (tab === "today") renderStrip();
+    if (tab === "today") { renderStrip(); renderLock(); }
     if (tab === "timeline") renderTimeline();
     if (tab === "wall") renderWall();
     if (tab === "backup") renderBackup();
   }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && idb) render(); });
 
   // ---------- boot ----------
   (async () => {
