@@ -128,6 +128,12 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
 .ex-strip button { flex: 0 0 auto; width: 54px; height: 70px; border-radius: 7px; overflow: hidden; padding: 0; border: 1px solid var(--line); background: var(--sunk); cursor: pointer; }
 .ex-strip button img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ex-strip .ex-add { border: 1.5px dashed var(--line); background: var(--bg); color: var(--muted); font-size: 22px; }
+.meals { display: grid; gap: 12px; }
+.meal { display: grid; gap: 6px; }
+.meal-head { display: flex; align-items: center; gap: 8px; }
+.meal-head b { font-size: 14px; min-width: 3em; }
+.meal-head input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 6px 9px; font-size: 14px; }
+.meal .ex-strip button { width: 64px; height: 64px; }
 .save-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 
 .day { display: grid; gap: 8px; }
@@ -259,6 +265,8 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
 
         <div class="lockwrap" style="margin-top:6px">
           <fieldset id="restSet">
+            <div class="row stack"><label>吃了什么 <span class="hint">（拍照或写一句都行，不影响打卡）</span></label>
+              <div class="meals" id="meals"></div></div>
             <div class="row"><label for="fWaist">腰围</label>
               <div class="field"><input id="fWaist" type="number" inputmode="decimal" step="0.1" min="0" placeholder="—"><span class="unit">cm · 肚脐一圈</span></div></div>
             <div class="row"><label for="fSleep">昨晚几点睡</label>
@@ -582,7 +590,49 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
       box.append(b);
     }
     slot($("screenSlot"), d.screenPhoto, "截图");
-    renderExtras();
+    renderExtras(); renderMeals();
+  }
+
+
+  // 三餐
+  const MEALS = [["breakfast", "早餐"], ["lunch", "午餐"], ["dinner", "晚餐"], ["snack", "加餐"]];
+  const MEAL_MAX = 6;
+  function renderMeals() {
+    const ms = (daily.get(sel) || {}).meals || {}, box = $("meals"); box.replaceChildren();
+    for (const [k, name] of MEALS) {
+      const m = ms[k] || {}, ids = m.photos || [];
+      const inp = el("input", { type: "text", id: "meal-" + k, placeholder: k === "snack" ? "奶茶、零食、宵夜都记这里" : "吃了什么，比如：玉米 + 两个蛋 + 豆浆", value: m.text || "" });
+      inp.addEventListener("change", () => saveMeal(k, { text: inp.value.trim() || null }));
+      const strip = el("div", { class: "ex-strip" });
+      ids.forEach((id) => {
+        const b = el("button", { type: "button", "aria-label": name + "照片" }, media("img", id, { alt: name }));
+        b.addEventListener("click", async () => {
+          const how = await sheet(name, [["看大图", "view"], ["删除这张", "del"]]);
+          if (how === "view") openLB(id, md(sel) + " · " + name);
+          else { await saveMeal(k, { photos: ids.filter((x) => x !== id) }); await del("blobs", id); urlCache.delete(id); toast("已删除"); renderMeals(); }
+        });
+        strip.append(b);
+      });
+      if (ids.length < MEAL_MAX) {
+        const add = el("button", { type: "button", class: "ex-add", text: "＋", "aria-label": "拍" + name });
+        add.addEventListener("click", async () => {
+          const how = await sheet("拍" + name, [["拍照", "cam"], ["从相册选（可多选）", "gallery"]]);
+          const fs = how === "cam" ? await pick({ camera: "environment" }) : await pick({ multiple: true });
+          const day = sel, cur = (((daily.get(day) || {}).meals || {})[k] || {}).photos || [], newIds = [];
+          try {
+            for (const f of fs.slice(0, MEAL_MAX - cur.length)) if (f.type.startsWith("image/")) newIds.push((await storeFile(f)).id);
+            await saveMeal(k, { photos: [...cur, ...newIds] }, day); toast(name + "已保存"); renderMeals();
+          } catch (e) { toast("照片保存失败"); }
+        });
+        strip.append(add);
+      }
+      box.append(el("div", { class: "meal" }, el("div", { class: "meal-head" }, el("b", { text: name }), inp), strip));
+    }
+  }
+  async function saveMeal(k, patch, day = sel) {
+    const ms = { ...((daily.get(day) || {}).meals || {}) };
+    ms[k] = { ...(ms[k] || {}), ...patch };
+    await writeDay(day, { meals: ms });
   }
 
   // 更多角度
@@ -730,11 +780,15 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
         sec.append(dayPills(d));
         if (d.skip) sec.append(el("div", { class: "pills" }, el("span", { class: "pill flag", text: "跳过打卡：" + d.skip.reason })));
         if (d.special) sec.append(el("div", { class: "pills" }, el("span", { class: "pill flag", text: "特别情况：" + d.special })));
+        const mt = MEALS.filter(([k]) => d.meals && d.meals[k] && d.meals[k].text);
+        if (mt.length) sec.append(el("div", { class: "pills" }, ...mt.map(([k, n]) => el("span", { class: "pill" }, n + "：" + d.meals[k].text))));
         const ph = d.photos || {}, imgs = [];
         if (d.screenPhoto) imgs.push([d.screenPhoto, "屏幕时间"]);
         for (const [a, n] of SHOTS) if (ph[a]) imgs.push([ph[a], n]);
         const ex = d.extras || {};
         for (const [c, n] of [["face", "脸"], ["body", "身体"], ["screen", "截图"]]) (ex[c] || []).forEach((id) => imgs.push([id, n + "+"]));
+        const ms = d.meals || {};
+        for (const [k, n] of MEALS) (ms[k] && ms[k].photos || []).forEach((id) => imgs.push([id, n]));
         if (imgs.length) {
           const strip = el("div", { class: "thumbs" });
           for (const [id, n] of imgs) { const b = el("button", { type: "button", class: "thumb" }, media("img", id, { alt: n }), el("span", { text: n })); b.addEventListener("click", () => openLB(id, md(k) + " · " + n)); strip.append(b); }
@@ -835,6 +889,15 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
       if (d.skip) o.skippedCheckIn = d.skip.reason;
       const ph = d.photos || {};
       if (Object.keys(ph).length) { o.photos = {}; for (const [k] of SHOTS) if (ph[k]) { const f = "media/" + d.day + "_" + k + ".jpg"; files.push([f, ph[k]]); o.photos[k] = f; } }
+      const ms = d.meals || {};
+      if (Object.values(ms).some((m) => m && (m.text || (m.photos && m.photos.length)))) {
+        o.meals = {};
+        for (const [k] of MEALS) {
+          const m = ms[k]; if (!m || !(m.text || (m.photos && m.photos.length))) continue;
+          o.meals[k] = { text: m.text || "" };
+          if (m.photos && m.photos.length) o.meals[k].photos = m.photos.map((id, i) => { const f = "media/" + d.day + "_meal-" + k + "-" + (i + 1) + ".jpg"; files.push([f, id]); return f; });
+        }
+      }
       const ex = d.extras || {};
       if (Object.values(ex).some((a) => a && a.length)) {
         o.morePhotos = {};
@@ -914,7 +977,9 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
         if (cur) {
           const ex = { ...(d.extras || {}) };
           for (const [c, ids] of Object.entries(cur.extras || {})) ex[c] = [...new Set([...(ex[c] || []), ...ids])];
-          merged = { ...d, ...cur, photos: { ...(d.photos || {}), ...(cur.photos || {}) }, extras: ex };
+          const ml = { ...(d.meals || {}) };
+          for (const [k, m] of Object.entries(cur.meals || {})) ml[k] = { ...(ml[k] || {}), ...m, photos: [...new Set([...((ml[k] || {}).photos || []), ...(m.photos || [])])] };
+          merged = { ...d, ...cur, photos: { ...(d.photos || {}), ...(cur.photos || {}) }, extras: ex, meals: ml };
         }
         await put("daily", merged); daily.set(d.day, merged); nd++;
       }
