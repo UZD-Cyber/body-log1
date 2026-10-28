@@ -455,8 +455,9 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
     ];
   }
   function checkedIn(day) { const d = daily.get(day); return !!d && (!!d.skip || steps(d).every((s) => s[1])); }
-  const locked = () => sel === today() && !checkedIn(today());
-  const todayLocked = () => !checkedIn(today());
+  // 不再上锁：打卡只显示进度，不挡住其他记录
+  const locked = () => false;
+  const todayLocked = () => false;
 
   // ---------- tabs ----------
   function setTab(t) {
@@ -741,13 +742,14 @@ fieldset:disabled { opacity: .38; pointer-events: none; }
     const nl = todayLocked();
     $("noteSet").disabled = nl; $("noteLock").hidden = !nl;
     $("albumSet").disabled = nl; $("albumLock").hidden = !nl;
-    $("skipBox").hidden = !isToday || (ok && !(d && d.skip));
+    $("skipBox").hidden = !(d && d.skip);
     $("skipOpen").hidden = !!(d && d.skip);
     const sh = $("skipShown"); sh.hidden = !(d && d.skip);
     sh.replaceChildren(d && d.skip ? el("span", { class: "pill flag", text: "今天跳过打卡：" + d.skip.reason }) : "");
     // 没打卡时，基础表放到最上面
-    $("blockDay").style.order = nl ? "1" : "2";
-    $("blockNote").style.order = nl ? "2" : "1";
+    const pendingToday = !checkedIn(today());
+    $("blockDay").style.order = pendingToday ? "1" : "2";
+    $("blockNote").style.order = pendingToday ? "2" : "1";
   }
 
   function filled(d) { return d && (d.weight != null || d.waist != null || d.sleep || d.milkTea != null || d.bpSys != null || d.special || d.screenPhoto || d.sleepPhoto || d.skip || (d.photos && Object.keys(d.photos).length)); }
